@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Sala {
+  id        Int     @id @default(autoincrement())
+  nome      String @unique
+  capacidade Int
+  ativa     Boolean @default(true)
+  reservas Reserva[]
+}
+
+
+model Reserva{
+  id Int @id @default(autoincrement())
+  dataHoraInicio DateTime
+  dataHoraFim DateTime
+  titulo String
+  salaId Int
+  sala Sala @relation(fields: [salaId], references: [id])
+  usuario String?
+  aprovado Boolean @default(false)
+  reprovado Boolean @default(false)
+  horaReserva DateTime @default(now())
+}
+
+
+

@@ -18,15 +18,32 @@ class SalaController {
 
     async listarSalasPorCapacidade(req, res) {
         try {
-            const numCapacidade = req.params.capacidade;
-            if(numCapacidadecapacidade && Number(numCapacidade)){
-                const salaCapacidade = await this.salaService.mostraSalasPorCapacidade(numCapacidade);
-                res.send(salaCapacidade);
-            } else {
+            const numCapacidade = Number(req.params.capacidade);
+            if(isNaN(numCapacidade)){
+                return res.status(400).send("A capacidade deve ser um número válido.");
+            }
+            const salaCapacidade = await this.salaService.pegaUmRegistroPorCapacidade(numCapacidade);
+            if (numCapacidade === 0){
                 res.status(422)
                 res.send("Infelizmente não temos sala para essa capacidade!")
-            } 
+            }
+            res.send(salaCapacidade);
+            
         } catch (error) {
+            res.status(500)
+            res.send(error.message)       
+        }
+    }
+    async listarSalasAtivas(req, res) {
+        try {
+            const salaAtiva = await this.salaService.pegaRegistrosAtivos();
+            console.log(salaAtiva);
+            if (salaAtiva.lenght === 0){
+                res.status(422)
+                res.send("Não temos salas ativas")
+            }
+            res.send(salaAtiva);
+            } catch (error) {
             res.status(500)
             res.send(error.message)       
         }
@@ -50,6 +67,63 @@ class SalaController {
             const salaCriada = await this.salaService.criaRegistro(salanova)
             res.status(201)
             return res.send('Sala cadastrada com sucesso') 
+        } catch (error) {
+            res.status(500)
+            return res.send(error.message)   
+        }        
+    }
+    async inativarSala(req,res){
+        try {
+            const salaParaInativar = Number(req.params.id)
+            if(salaParaInativar.reservada){
+                res.status(400)
+                return res.send('A sala não pode ser inativada pois está reservada')
+            }
+            const salaInativada = await this.salaService.salaInativar(salaParaInativar)     
+            res.status(201)
+            return res.send(`A sala ${salaParaInativar} foi inativada.`) 
+        } catch (error) {
+            res.status(500)
+            return res.send(error.message)   
+        }
+    }
+    async ativarSala(req,res){
+        try {
+            const salaParaAtivar = Number(req.params.id)
+            const salaAtivada = await this.salaService.salaAtivar(salaParaAtivar)     
+            res.status(201)
+            return res.send(`A sala ${salaParaAtivar} foi Ativada.`) 
+        } catch (error) {
+            res.status(500)
+            return res.send(error.message)   
+        }
+    }
+    async editarSala(req,res){
+        try {
+            const {id} = req.params;
+            const salaParaEditar = req.body;
+            const salaEditada = await this.salaService.atualizaRegistro(Number(id), salaParaEditar)     
+            res.status(201)
+            return res.send(`A sala ${salaParaEditar} foi Editada.`) 
+        } catch (error) {
+            res.status(500)
+            return res.send(error.message)   
+        }
+    }
+
+
+    async deletarSala(req, res) {
+        try {
+            const salaParaDeletar = req.params.id;
+            const sala = await this.salaService.pegaUmRegistroPorId(salaParaDeletar)
+            if(!sala){
+                res.status(400)
+                return res.send('Sala não encontrada')             
+            } 
+            
+            const salaDeletada = await this.salaService.excluiRegistro(salaParaDeletar)
+            res.status(201)
+            return res.send(`Sala deletada com sucesso!`) 
         } catch (error) {
             res.status(500)
             return res.send(error.message)           

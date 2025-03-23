@@ -1,28 +1,11 @@
 const Services = require("./Services.js");
-const dataSource = require('../database/models');
-const Sala = require('../database/models/sala.js');
+const prisma = require('../../prisma/prismaClient');
+const ReservaServices = require ("./ReservaService.js");
 
 class SalaServices extends Services{
     constructor(){
-        super('Sala');
-    }
-
-    async mostraSalasPorCapacidade(capacidade) {
-        const capacidadeNum = Number(capacidade);
-        
-        if (isNaN(capacidadeNum)) {
-            throw new Error("Capacidade inválida");
-        }
-    
-        const salas = await dataSource.Sala.findAll({
-            where: {
-                capacidade: {
-                    [Op.lte]: capacidadeNum // Menor ou igual (<=)
-                }
-            }
-        });
-    
-        return salas;
+        super('sala');
+        this.reservaService = new ReservaServices();
     }
 
     async isNomeSalaUsado(nomeSala) {
@@ -30,15 +13,35 @@ class SalaServices extends Services{
             throw new Error("Nome da sala inválido");
         }
     
-        const salas = await dataSource.Sala.findAll({
+        return await prisma.sala.findUnique({
             where: {
                 nome: nomeSala
             }
         });
-    
-        return salas.length > 0; // Correção do erro de digitação
-    }    
-    
+    }   
+    async salaInativar(id) {
+        return await prisma.sala.update({
+            where: { id: Number(id) },
+            data: { ativa: false }
+        });
+    }
+    async salaAtivar(id) {
+        return await prisma.sala.update({
+            where: { id: Number(id) },
+            data: { ativa: true }
+        });
+    }
+    async excluiRegistro(id) {
+        const reservasDaSala =  await this.reservaService.retornaReservasSala(id);
+        if(reservasDaSala.length > 0){
+            // await this.salaInativar(id)
+            // return;
+            throw new Error("A sala não pode ser excluida pois existem reservas a ela.");
+        }
+        
+        return await prisma[this.model].delete({ 
+          where: { id: Number(id) } });
+      }
 }
 
 module.exports = SalaServices;

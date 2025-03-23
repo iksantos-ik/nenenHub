@@ -1,22 +1,19 @@
 const express = require('express');
-// const {connectDB} = require('./db');
 const rotaSala = require('./src/Rotas/SalaRota.js');
-const openDb = require('./configDB.js');
+const rotaReserva = require('./src/Rotas/ReservaRota.js')
+const cors = require("cors");
+
 
 const app = express();
-
-openDb();
-
-// connectDB();
+// Permitir todas as origens (pode ser mais restritivo, se necessário)
+app.use(cors({ origin: 'http://localhost:3000' }));
 
 app.use(express.json());
 app.use('/salas', rotaSala);
+app.use('/reservas', rotaReserva);
+
 
 const port = 8000;
-
-// app.get('/', (req, res) => {
-//     res.send('Bem vindo ao Nenen Hub!');
-// });
 
 app.listen(port, () => {
     console.log(`Servidor rodando na porta ${port}`);
