@@ -1,5 +1,6 @@
 const Services = require("./Services.js");
 const prisma = require('../../prisma/prismaClient');
+const StatusReserva = require ('./Constantes.js')
 
 class ReservaServices extends Services {
     constructor() {
@@ -37,6 +38,53 @@ class ReservaServices extends Services {
         })
         return reservasExistentes.length > 0;
     }
+
+    async pegaTodasAsReservas() {
+        try {
+             
+            const reservas = await prisma.reserva.findMany({
+                include: {
+                    sala: {
+                        select: { nome: true, capacidade: true }, // Apenas o nome da sala
+                    },
+                },
+            });
+            
+            function cortarString(texto) {
+                return texto.length > 25 ? texto.substring(0, 25) + "..." : texto;
+            }
+            
+            // Função para formatar datas no padrão PT-BR
+             const formatarData = (data) =>
+                new Date(data).toLocaleString("pt-BR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                    hour12: false, // Mantém no formato 24h
+                    timeZone: "America/Sao_Paulo", // Ajuste para o fuso correto
+            });
+
+            // Mapeia os resultados para ajustar os dados e formatar as datas
+            return reservas.map(({ sala, dataHoraInicio, dataHoraFim, horaReserva, id, titulo, status}) => ({
+                id,
+                dataHoraInicio: formatarData(dataHoraInicio),
+                dataHoraFim: formatarData(dataHoraFim),
+                titulo: cortarString(titulo),
+                status,
+                horaReserva: formatarData(horaReserva),
+                nomeSala: sala.nome + " - capacidade: " + sala.capacidade, // Adiciona o nome da sala diretamente 
+            }));
+    
+        } catch (error) {
+            console.error("Erro ao buscar reservas:", error.message);
+            throw error;
+        }
+    }
+    
+
     async retornaReservasSala(salaId){
         const reservasSala = await prisma.reserva.findMany({
             where: {salaId: Number(salaId)},
@@ -46,84 +94,86 @@ class ReservaServices extends Services {
     }
     async listarReservasParaAprovar (){
         const reservasParaAprovar = await prisma.reserva.findMany({
-            where: {aprovado: false,
-                reprovado: false
+            where: {
+                status: StatusReserva.PRE_RESERVADO
+                // aprovado: false,
+                // reprovado: false
             }, 
             orderBy: {horaReserva: 'asc'}
         })
         return reservasParaAprovar;
     }
-    async listarSalasNaoReservadas() {
+    async listarSalasNaoAprovadas() {
         const salaNaoReservada = await prisma.reserva.findMany({
             where: {
-                aprovado: false,
-                reprovado: true
+                status: StatusReserva.NAO_APROVADO
                 },
         })
         return salaNaoReservada;
     }
-
+    async listarReservasAprovadas() {
+        const reservarAprovadas = await prisma.reserva.findMany({
+            where: {
+                status: StatusReserva.APROVADO
+            },
+        })
+        return reservarAprovadas;
+    }
 
     async aprovaReserva(id){
         const reservaAprovada = await prisma.reserva.findUnique({
             where: {id: Number(id)}
         })
-        if (!reservaAprovada){
-            throw new Error (`o ${reservaAprovada} não foi encontrado.`)
+        if(reservaAprovada.status != StatusReserva.PRE_RESERVADO){
+      //  if(!reservaAprovada.PRE_RESERVADO){
+            throw new Error (`a ${reservaAprovada} não pode ser aprovada.`)
         }
-        if(reservaAprovada.aprovado){
-            throw new Error (`o ${reservaAprovada} já foi aprovada.`)
-        }
-        if(this.verificaReservaNoMesmoIntervalo(id)){
-            throw new Error (`Já existe uma reserva aprovada para a sala ${reservaAprovada.id} nesse horário`);
-        }
-
-        return await prisma.reserva.update({
+        await prisma.reserva.update({
             where: { id: Number(id) },
-            data: { aprovado: true }
+            data: {status: StatusReserva.APROVADO}
         })
+        return (`Reserva aprovada com sucesso!`);
     }
-    async reprovaReservaConflitante(salaId){
-        const reservasAprovadas = await prisma.reserva.findMany({
-            where: {salaId: Number(salaId),
-                    aprovado: true
-            },
-            orderBy: {horaReserva: 'asc'},
+    async reprovaReserva(id){
+        const reservaReprovada = await prisma.reserva.findUnique({
+            where: {id: Number(id)}
         });
-        if (reservasAprovadas.length === 0) {
-            throw new Error("Nenhuma reserva aprovada encontrada para esta sala.");
-        }
-        const reservaAprovada = reservasAprovadas[0]; // Pega a reserva mais antiga aprovada
-        const inicioAprovado = new Date(reservaAprovada.dataHoraInicio);
-        const fimAprovado = new Date(reservaAprovada.dataHoraFim);
-
-        const reservasReprovar = await prisma.reserva.findMany({
-            where: {
-                salaId: Number(salaId),
-                aprovado: false
-            },
-            OR: [
-                { 
-                    AND: [
-                        { dataHoraInicio: { lte: fimAprovado } }, 
-                        { dataHoraFim: { gte: inicioAprovado } }
-                    ] 
-                }
-            ]
-        })
-        if (reservasReprovar.length === 0) {
-            return "Nenhuma reserva conflitante foi encontrada para reprovação.";
+        if (reservaReprovada.status != StatusReserva.PRE_RESERVADO) {
+            throw new Error("Esta reserva não pode ser reprovada.");
         }   
-        
-        await prisma.reserva.updateMany({
-            where: { salaId: Number(salaId) },
-            data: { reprovado: true }
+        await prisma.reserva.update({
+            where: { id: Number(id)},
+            data: { status: StatusReserva.NAO_APROVADO}
         })
-        return `Foram reprovadas ${reservasReprovar.length} reservas conflitantes na sala ${salaId}.`;
+        return (`Reserva reprovada!`);
+    }           
+    async editaReserva(id, dadosAtualizados){
+        const reservaEditada = await prisma.reserva.findUnique({
+            where: {id: Number(id)}
+        })
+        if(reservaEditada.status != StatusReserva.PRE_RESERVADO){
+            throw new Error (`o ${reservaEditada} não pode ser editada, pois está aprovada.`)
+        }
+            await prisma.reserva.update({
+            where: { id: Number(id) },
+            data: {...dadosAtualizados}
+            })
+            return (`A reserva foi atualizada!`)
     }
-    
 
+    async cancelaReserva(id){
+        const reservaCancelada = await prisma.reserva.findUnique({
+            where: {id: Number(id)}
+        })
+        if (reservaCancelada.status != StatusReserva.APROVADO){
+            throw new Error (`o ${reservaCancelada} não pode ser cancelada. Apenas reservas aprovadas podem ser canceladas.`)
+        }
+            await prisma.reserva.update({
+            where: { id: Number(id) },
+            data: {status: StatusReserva.CANCELADO}
+            })
+            return (`A reserva foi cancelada!`)
+    }
 }
-
 
 module.exports = ReservaServices; 

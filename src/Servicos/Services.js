@@ -15,11 +15,13 @@ class Services {
         where: {ativa: true}
       });
     }
+
     async pegaUmRegistroPorId(id) {
     return await prisma[this.model].findUnique({
       where: {id: Number(id)}
     });
   }
+  
   async pegaUmRegistroPorCapacidade(capacidade) {
     return await prisma[this.model].findMany({
       where: {capacidade: Number(capacidade)}
@@ -33,9 +35,14 @@ class Services {
     }
 
     async criaRegistro(dadosDoRegistro) {
-      return await prisma[this.model].create({
-        data: { ...dadosDoRegistro },
-      });
+      console.log(dadosDoRegistro)
+      try{
+        return await prisma[this.model].create({
+          data: { ...dadosDoRegistro },
+        });
+      }catch(e){
+        console.log(e)
+      }
     }  
 
     async atualizaRegistro(id, dadosAtualizados){

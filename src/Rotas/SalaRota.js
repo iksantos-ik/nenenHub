@@ -12,6 +12,7 @@ const router = Router();
 router.get('/', (req, res) => salaController.listarSalas(req,res));
 router.get('/capacidade/:capacidade', (req, res) => salaController.listarSalasPorCapacidade(req,res));
 router.get('/ativa', (req, res) => salaController.listarSalasAtivas(req,res));
+router.get('/:id', (req, res) => salaController.listarSalaPorId(req,res));
 router.post('/', (req, res) => salaController.cadastraSala(req,res));
 router.put('/inativar/:id', (req, res) => salaController.inativarSala(req,res));
 router.put('/ativar/:id', (req, res) => salaController.ativarSala(req,res));

@@ -23,9 +23,10 @@ model Reserva{
   titulo String
   salaId Int
   sala Sala @relation(fields: [salaId], references: [id])
-  usuario String?
-  aprovado Boolean @default(false)
-  reprovado Boolean @default(false)
+  // usuario String?
+  status String
+  //aprovado Boolean @default(false)
+  //reprovado Boolean @default(false)
   horaReserva DateTime @default(now())
 }
 

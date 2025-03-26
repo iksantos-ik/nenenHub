@@ -48,6 +48,17 @@ class SalaController {
             res.send(error.message)       
         }
     }
+    async listarSalaPorId(req, res) {
+        try {
+            const {id} = req.params;
+            const sala = await this.salaService.pegaUmRegistroPorId(id);
+            res.send(sala);        
+        } catch (error) {
+            res.status(500)
+            res.send(error.message)        
+        }
+    }
+
 
     async cadastraSala(req, res) {
         try {
