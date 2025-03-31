@@ -22,11 +22,11 @@ class Services {
     });
   }
   
-  async pegaUmRegistroPorCapacidade(capacidade) {
-    return await prisma[this.model].findMany({
-      where: {capacidade: Number(capacidade)}
-    });
-  }
+  // async pegaUmRegistroPorCapacidade(capacidade) {
+  //   return await prisma[this.model].findMany({
+  //     where: {capacidade: Number(capacidade)}
+  //   });
+  // }
       async pegaEContaRegistros(where) {
       return dataSource[this.model].findUnique({where: {...where},
         //limit: 2,

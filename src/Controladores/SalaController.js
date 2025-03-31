@@ -58,6 +58,19 @@ class SalaController {
             res.send(error.message)        
         }
     }
+    async listagemSalaPorFiltro(req, res) {
+        try {
+            const {nome, capacidade, ativa} = req.query;
+            const salas = await this.salaService.listarSalaPorFiltros(nome, capacidade, ativa);
+            res.send(salas);        
+        } catch (error) {
+            res.status(500)
+            res.send(error.message)        
+        }
+    }
+
+
+    
 
 
     async cadastraSala(req, res) {

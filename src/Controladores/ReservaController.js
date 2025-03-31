@@ -69,6 +69,17 @@ class ReservaController {
         }
     }
 
+    async listagemReservaPorFiltro(req, res) {
+        try {
+            const {dataHoraInicio, dataHoraFim, salaId, status} = req.query;
+            const reservas = await this.reservaService.listarReservasPorFiltros(dataHoraInicio, dataHoraFim, salaId, status);
+            res.send(reservas);        
+        } catch (error) {
+            res.status(500)
+            res.send(error.message)        
+        }
+    }
+
     async criaReserva(req, res){
         try {
             const {dataHoraInicio, dataHoraFim, salaId, usuario, titulo} = req.body;
@@ -84,7 +95,7 @@ class ReservaController {
                 return res.status(400).send("Erro! Verifique as datas!")
             }
 
-            const reservaDaSala = await this.reservaService.criaRegistro({
+            const reservaDaSala = await this.reservaService.criarReservaDeSala({
                 dataHoraInicio, 
                 dataHoraFim,
                 salaId: Number(salaId),

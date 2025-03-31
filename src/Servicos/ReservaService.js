@@ -40,8 +40,7 @@ class ReservaServices extends Services {
     }
 
     async pegaTodasAsReservas() {
-        try {
-             
+        try {     
             const reservas = await prisma.reserva.findMany({
                 include: {
                     sala: {
@@ -119,6 +118,90 @@ class ReservaServices extends Services {
         })
         return reservarAprovadas;
     }
+
+    async listarReservasPorFiltros(dataHoraInicio, dataHoraFim, salaId, status) {
+        const filtro = {};
+    
+        if (dataHoraInicio && !isNaN(Date.parse(dataHoraInicio))) {
+            filtro.dataHoraInicio = { gte: new Date(dataHoraInicio) }; // Busca reservas a partir da data informada
+        }
+        
+        if (dataHoraFim && !isNaN(Date.parse(dataHoraFim))) {
+            filtro.dataHoraFim = { lte: new Date(dataHoraFim) }; // Busca reservas até a data informada
+        }        
+    
+        if (salaId) {
+            filtro.salaId = Number(salaId); // Converte para número, garantindo compatibilidade com o banco
+        }
+    
+        if (status !== '' && status !== undefined) {
+            filtro.status = status; // Filtra pelo status da reserva
+        }
+
+   
+        function cortarString(texto) {
+            return texto.length > 25 ? texto.substring(0, 25) + "..." : texto;
+        }
+        
+        // Função para formatar datas no padrão PT-BR
+         const formatarData = (data) =>
+            new Date(data).toLocaleString("pt-BR", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false, // Mantém no formato 24h
+                timeZone: "America/Sao_Paulo", // Ajuste para o fuso correto
+        });
+
+        try {
+            const reservas = await prisma.reserva.findMany({ 
+                    where: filtro,
+                    include: {
+                        sala: {
+                            select: { nome: true, capacidade: true }, // Apenas o nome da sala
+                        },
+                    }
+                });                
+
+            // Mapeia os resultados para ajustar os dados e formatar as datas
+            return reservas.map(({ sala, dataHoraInicio, dataHoraFim, horaReserva, id, titulo, status}) => ({
+                id,
+                dataHoraInicio: formatarData(dataHoraInicio),
+                dataHoraFim: formatarData(dataHoraFim),
+                titulo: cortarString(titulo),
+                status,
+                horaReserva: formatarData(horaReserva),
+                nomeSala: sala.nome + " - capacidade: " + sala.capacidade, // Adiciona o nome da sala diretamente 
+            }));           
+        } catch (error) {
+            console.error("Erro ao buscar reservas:", error.message);
+            throw error;
+        }
+    }
+
+    async criarReservaDeSala(dadosDoRegistro) {
+        console.log(dadosDoRegistro);
+        
+        try {
+          return await prisma.reserva.create({
+            data: {
+              dataHoraInicio: new Date(dadosDoRegistro.dataHoraInicio),
+              dataHoraFim: new Date(dadosDoRegistro.dataHoraFim),
+              salaId: dadosDoRegistro.salaId,
+              titulo: dadosDoRegistro.titulo,
+              status: dadosDoRegistro.status
+            }
+          });
+        } catch (error) {
+          console.error(error);
+          throw error;
+        }
+      }
+      
+    
 
     async aprovaReserva(id){
         const reservaAprovada = await prisma.reserva.findUnique({

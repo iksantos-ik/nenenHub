@@ -8,6 +8,7 @@ const reservaController = new ReservaController();
 const router = Router();
 
 router.get('/', (req, res) => reservaController.listarReservas(req,res));
+router.get('/filtro', (req, res) => reservaController.listagemReservaPorFiltro(req,res));
 router.get('/reservadas/:salaId', (req, res) => reservaController.listarReservasSala(req,res));
 router.get('/aprovadas', (req, res) => reservaController.listaDeReservasAprovadas(req,res));
 router.get('/:id', (req, res) => reservaController.listarReservaPorId(req,res));

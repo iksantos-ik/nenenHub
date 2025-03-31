@@ -10,6 +10,7 @@ const salaController = new SalaController();
 const router = Router();
 
 router.get('/', (req, res) => salaController.listarSalas(req,res));
+router.get('/filtro', (req, res) => salaController.listagemSalaPorFiltro(req,res));
 router.get('/capacidade/:capacidade', (req, res) => salaController.listarSalasPorCapacidade(req,res));
 router.get('/ativa', (req, res) => salaController.listarSalasAtivas(req,res));
 router.get('/:id', (req, res) => salaController.listarSalaPorId(req,res));
