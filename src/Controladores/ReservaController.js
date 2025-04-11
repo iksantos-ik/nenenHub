@@ -7,8 +7,10 @@ class ReservaController {
     }
 
     async listarReservas(req, res) {
+        
         try {
-            const reservas = await this.reservaService.pegaTodasAsReservas();
+            const { role, id: usuarioId } = req.usuario;
+            const reservas = await this.reservaService.pegaTodasAsReservas(role, usuarioId);
             res.send(reservas);        
         } catch (error) {
             res.status(500)
@@ -80,9 +82,13 @@ class ReservaController {
         }
     }
 
+    
+    
+    
     async criaReserva(req, res){
         try {
-            const {dataHoraInicio, dataHoraFim, salaId, usuario, titulo} = req.body;
+            const usuarioId = req.usuario.id;
+            const {dataHoraInicio, dataHoraFim, salaId, titulo, usuario} = req.body;
 
             if (!dataHoraInicio && !dataHoraFim || !salaId) {
                 return res.status(400).send("❌ Os campos 'data' e 'salaId' são obrigatórios.")
@@ -95,14 +101,19 @@ class ReservaController {
                 return res.status(400).send("Erro! Verifique as datas!")
             }
 
+            console.log('Usuario autenticado:', req.usuario);
+            console.log('Usuario ID enviado para reserva:', usuarioId);
+
             const reservaDaSala = await this.reservaService.criarReservaDeSala({
                 dataHoraInicio, 
                 dataHoraFim,
                 salaId: Number(salaId),
-                ...(usuario ? { usuario } : {}),
                 titulo,
-                status: StatusReserva.PRE_RESERVADO
+                status: StatusReserva.PRE_RESERVADO,
+                usuarioId
             });
+
+           
 
             return res.send(`Sala ${salaId} reservada com sucesso para ${usuario}.`);
         } catch (error) {

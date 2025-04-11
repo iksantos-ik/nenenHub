@@ -23,11 +23,31 @@ model Reserva{
   titulo String
   salaId Int
   sala Sala @relation(fields: [salaId], references: [id])
-  // usuario String?
   status String
-  //aprovado Boolean @default(false)
-  //reprovado Boolean @default(false)
   horaReserva DateTime @default(now())
+  usuarioId Int
+  usuario Usuario   @relation(fields: [usuarioId], references: [id])
+}
+
+model Usuario{
+  id Int @id @default(autoincrement())
+  nome String
+  email String @unique
+  senha String
+  status   Status   @default(PENDENTE)
+  role  Role?
+  reservas Reserva[]
+}
+
+enum Role{
+  ADMIN
+  USER
+}
+
+enum Status {
+  PENDENTE
+  APROVADO
+  RECUSADO
 }
 
 

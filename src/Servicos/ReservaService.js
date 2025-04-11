@@ -39,16 +39,36 @@ class ReservaServices extends Services {
         return reservasExistentes.length > 0;
     }
 
-    async pegaTodasAsReservas() {
-        try {     
-            const reservas = await prisma.reserva.findMany({
-                include: {
-                    sala: {
-                        select: { nome: true, capacidade: true }, // Apenas o nome da sala
+    async pegaTodasAsReservas(role, usuarioId) {
+        let reservas
+        try {
+            if (role === 'ADMIN') {
+                // Admin vê tudo
+                reservas = await prisma.reserva.findMany({
+                  include: {
+                    usuario: {
+                      select: { nome: true, email: true }
                     },
-                },
-            });
-            
+                    sala: {
+                        select: { nome: true, capacidade: true }
+                    }
+                  }
+                });
+              } else {
+                // User vê só as dele
+                reservas = await prisma.reserva.findMany({
+                  where: {
+                    usuarioId: usuarioId
+                  },
+                  include: {
+                    usuario: {
+                      select: {nome: true, email: true }
+                    },
+                    sala: true
+                  }
+                });
+              }
+
             function cortarString(texto) {
                 return texto.length > 25 ? texto.substring(0, 25) + "..." : texto;
             }
@@ -67,7 +87,7 @@ class ReservaServices extends Services {
             });
 
             // Mapeia os resultados para ajustar os dados e formatar as datas
-            return reservas.map(({ sala, dataHoraInicio, dataHoraFim, horaReserva, id, titulo, status}) => ({
+            return reservas.map(({ sala, dataHoraInicio, dataHoraFim, horaReserva, id, titulo, status, usuario}) => ({
                 id,
                 dataHoraInicio: formatarData(dataHoraInicio),
                 dataHoraFim: formatarData(dataHoraFim),
@@ -75,6 +95,7 @@ class ReservaServices extends Services {
                 status,
                 horaReserva: formatarData(horaReserva),
                 nomeSala: sala.nome + " - capacidade: " + sala.capacidade, // Adiciona o nome da sala diretamente 
+                usuario: usuario.nome
             }));
     
         } catch (error) {
@@ -181,7 +202,7 @@ class ReservaServices extends Services {
             throw error;
         }
     }
-
+ 
     async criarReservaDeSala(dadosDoRegistro) {
         console.log(dadosDoRegistro);
         
@@ -192,7 +213,12 @@ class ReservaServices extends Services {
               dataHoraFim: new Date(dadosDoRegistro.dataHoraFim),
               salaId: dadosDoRegistro.salaId,
               titulo: dadosDoRegistro.titulo,
-              status: dadosDoRegistro.status
+              status: dadosDoRegistro.status,
+              usuarioId: dadosDoRegistro.usuarioId
+            },
+            include: {
+                sala: true,
+                usuario: { select: { email: true } },
             }
           });
         } catch (error) {
@@ -200,9 +226,6 @@ class ReservaServices extends Services {
           throw error;
         }
       }
-      
-    
-
     async aprovaReserva(id){
         const reservaAprovada = await prisma.reserva.findUnique({
             where: {id: Number(id)}
@@ -234,15 +257,12 @@ class ReservaServices extends Services {
         const reservaEditada = await prisma.reserva.findUnique({
             where: {id: Number(id)}
         })
-        if(reservaEditada.status != StatusReserva.PRE_RESERVADO){
-            throw new Error (`o ${reservaEditada} não pode ser editada, pois está aprovada.`)
-        }
-            await prisma.reserva.update({
-            where: { id: Number(id) },
-            data: {...dadosAtualizados}
-            })
-            return (`A reserva foi atualizada!`)
-    }
+        await prisma.reserva.update({
+        where: { id: Number(id) },
+        data: {...dadosAtualizados}
+        })
+        return (`A reserva foi atualizada!`)
+}
 
     async cancelaReserva(id){
         const reservaCancelada = await prisma.reserva.findUnique({

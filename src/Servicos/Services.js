@@ -8,6 +8,7 @@ class Services {
     }
     
     async pegaTodosOsRegistros () {
+        console.log("Modelo usado:", this.model);
         return await prisma[this.model].findMany();
     }
     async pegaRegistrosAtivos (ativa) {
